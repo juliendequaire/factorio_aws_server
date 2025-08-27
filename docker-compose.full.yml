@@ -1,0 +1,54 @@
+services:
+  factorio:
+    build: 
+      context: docker
+      dockerfile: Dockerfile.local
+      platforms:
+        - linux/amd64
+    container_name: factorio-server-local
+    ports:
+      - "34197:34197/udp"
+    volumes:
+      - factorio_saves:/opt/factorio/saves
+      - factorio_mods:/opt/factorio/mods
+      - factorio_config:/opt/factorio/config
+    environment:
+      - FACTORIO_USER_USERNAME=${FACTORIO_USERNAME:-}
+      - FACTORIO_USER_TOKEN=${FACTORIO_TOKEN:-}
+    restart: unless-stopped
+    mem_limit: 2g
+    memswap_limit: 2g
+    platform: linux/amd64
+    networks:
+      - factorio-network
+
+  factorio-api:
+    build:
+      context: local-api
+      dockerfile: Dockerfile
+    container_name: factorio-api-local
+    ports:
+      - "5001:5000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/workspace
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    depends_on:
+      - factorio
+    networks:
+      - factorio-network
+    restart: unless-stopped
+
+volumes:
+  factorio_saves:
+    driver: local
+  factorio_mods:
+    driver: local
+  factorio_config:
+    driver: local
+
+networks:
+  factorio-network:
+    driver: bridge
