@@ -1,0 +1,53 @@
+FROM ubuntu:22.04
+
+# Avoid interactive prompts during build
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install required packages
+RUN apt-get update && apt-get install -y \
+    wget \
+    xz-utils \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create factorio user
+RUN useradd -m -s /bin/bash factorio
+
+# Set Factorio version
+ENV FACTORIO_VERSION=1.1.109
+
+# Download and install Factorio
+WORKDIR /opt
+RUN wget -O factorio_headless_x64_${FACTORIO_VERSION}.tar.xz \
+    https://factorio.com/get-download/${FACTORIO_VERSION}/headless/linux64 && \
+    tar -xf factorio_headless_x64_${FACTORIO_VERSION}.tar.xz && \
+    chown -R factorio:factorio factorio && \
+    rm factorio_headless_x64_${FACTORIO_VERSION}.tar.xz
+
+# Create necessary directories
+RUN mkdir -p /opt/factorio/saves /opt/factorio/mods /opt/factorio/config
+
+# Copy server settings
+COPY server-settings.json /opt/factorio/data/server-settings.json
+COPY map-gen-settings.json /opt/factorio/data/map-gen-settings.json
+
+# Create default save if none exists
+RUN chown -R factorio:factorio /opt/factorio
+
+# Switch to factorio user
+USER factorio
+WORKDIR /opt/factorio
+
+# Create initial save file
+RUN ./bin/x64/factorio --create saves/default.zip
+
+# Expose Factorio port
+EXPOSE 34197/udp
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD pgrep factorio || exit 1
+
+# Start Factorio server
+CMD ["./bin/x64/factorio", "--start-server-load-latest", "--server-settings", "/opt/factorio/data/server-settings.json"]
