@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  factorio:
+    build: .
+    container_name: factorio-server
+    ports:
+      - "34197:34197/udp"
+    volumes:
+      - factorio_saves:/opt/factorio/saves
+      - factorio_mods:/opt/factorio/mods
+      - factorio_config:/opt/factorio/config
+    environment:
+      - FACTORIO_USER_USERNAME=${FACTORIO_USERNAME:-}
+      - FACTORIO_USER_TOKEN=${FACTORIO_TOKEN:-}
+    restart: unless-stopped
+    mem_limit: 2g
+    memswap_limit: 2g
+
+volumes:
+  factorio_saves:
+    driver: local
+  factorio_mods:
+    driver: local
+  factorio_config:
+    driver: local
